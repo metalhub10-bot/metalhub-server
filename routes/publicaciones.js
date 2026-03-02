@@ -1,0 +1,166 @@
+const express = require('express');
+const Publicacion = require('../models/Publicacion');
+const User = require('../models/User');
+const Session = require('../models/Session');
+
+const router = express.Router();
+
+async function requireAuth(req, res, next) {
+  const sessionId = req.headers['x-session-id'];
+  if (!sessionId) {
+    return res.status(401).json({ success: false, message: 'Sesión requerida' });
+  }
+  const session = await Session.findOne({ sessionId }).lean();
+  if (!session) {
+    return res.status(401).json({ success: false, message: 'Sesión inválida' });
+  }
+  req.userId = session.userId;
+  next();
+}
+
+router.get('/', async (req, res) => {
+  try {
+    const { tipo, orden, busqueda, metal, ubicacion, pagina = 1, limite = 20 } = req.query;
+    const filter = {};
+    if (tipo && tipo !== 'todos') {
+      if (tipo === 'compran') filter.tipo = 'compro';
+      else if (tipo === 'venden') filter.tipo = 'vendo';
+    }
+    if (metal) filter.metal = new RegExp(metal, 'i');
+    if (ubicacion) filter.ubicacion = new RegExp(ubicacion, 'i');
+    if (busqueda) {
+      filter.$or = [
+        { metal: new RegExp(busqueda, 'i') },
+        { descripcion: new RegExp(busqueda, 'i') },
+      ];
+    }
+    const sort = {};
+    if (orden === 'precio_asc') sort.precio = 1;
+    else if (orden === 'precio_desc') sort.precio = -1;
+    else if (orden === 'volumen') sort.cantidad = -1;
+    else sort.createdAt = -1;
+    const skip = (Math.max(1, parseInt(pagina, 10)) - 1) * Math.min(100, parseInt(limite, 10) || 20);
+    const limit = Math.min(100, parseInt(limite, 10) || 20);
+    const [items, total] = await Promise.all([
+      Publicacion.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      Publicacion.countDocuments(filter),
+    ]);
+    const userIds = [...new Set(items.map((i) => i.usuarioId.toString()))];
+    const users = await User.find({ _id: { $in: userIds } }).lean();
+    const userMap = Object.fromEntries(users.map((u) => [u._id.toString(), u]));
+    const data = items.map((p) => {
+      const u = userMap[p.usuarioId.toString()];
+      const pub = { ...p, id: p._id.toString(), creadoEn: p.createdAt };
+      delete pub._id;
+      delete pub.__v;
+      delete pub.createdAt;
+      delete pub.updatedAt;
+      pub.usuario = u ? { id: u._id.toString(), nombre: u.nombre, rating: u.rating ?? 0, ubicacion: u.ubicacion, verificado: u.verificado ?? false } : null;
+      return pub;
+    });
+    return res.json({ success: true, data, total });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/mias', requireAuth, async (req, res) => {
+  try {
+    const { pagina = 1, limite = 20 } = req.query;
+    const skip = (Math.max(1, parseInt(pagina, 10)) - 1) * Math.min(100, parseInt(limite, 10) || 20);
+    const limit = Math.min(100, parseInt(limite, 10) || 20);
+    const [items, total] = await Promise.all([
+      Publicacion.find({ usuarioId: req.userId }).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Publicacion.countDocuments({ usuarioId: req.userId }),
+    ]);
+    const user = await User.findById(req.userId).lean();
+    const data = items.map((p) => {
+      const pub = { ...p, id: p._id.toString(), creadoEn: p.createdAt };
+      delete pub._id;
+      delete pub.__v;
+      delete pub.createdAt;
+      delete pub.updatedAt;
+      pub.usuario = user ? { id: user._id.toString(), nombre: user.nombre, rating: user.rating ?? 0, ubicacion: user.ubicacion, verificado: user.verificado ?? false } : null;
+      return pub;
+    });
+    return res.json({ success: true, data, total });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/:id', async (req, res) => {
+  try {
+    const pub = await Publicacion.findById(req.params.id).lean();
+    if (!pub) return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
+    const user = await User.findById(pub.usuarioId).lean();
+    const data = { ...pub, id: pub._id.toString(), creadoEn: pub.createdAt };
+    delete data._id;
+    delete data.__v;
+    delete data.createdAt;
+    delete data.updatedAt;
+    data.usuario = user ? { id: user._id.toString(), nombre: user.nombre, rating: user.rating ?? 0, ubicacion: user.ubicacion, verificado: user.verificado ?? false, whatsapp: user.whatsapp } : null;
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { tipo, metal, cantidad, unidad, precio, precioAConvenir, descripcion, entrega, ubicacion, urgente } = req.body || {};
+    if (!tipo || !metal || cantidad == null || !unidad) {
+      return res.status(400).json({ success: false, message: 'Faltan tipo, metal, cantidad o unidad' });
+    }
+    const doc = await Publicacion.create({
+      tipo,
+      metal,
+      cantidad: Number(cantidad),
+      unidad,
+      precio: precio != null ? Number(precio) : undefined,
+      precioAConvenir: !!precioAConvenir,
+      descripcion,
+      entrega,
+      ubicacion,
+      urgente: !!urgente,
+      usuarioId: req.userId,
+    });
+    return res.status(201).json({ success: true, message: 'Publicación creada', data: doc.toJSON() });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/:id', requireAuth, async (req, res) => {
+  try {
+    const pub = await Publicacion.findOne({ _id: req.params.id, usuarioId: req.userId });
+    if (!pub) return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
+    const { tipo, metal, cantidad, unidad, precio, precioAConvenir, descripcion, entrega, ubicacion, urgente } = req.body || {};
+    if (tipo !== undefined) pub.tipo = tipo;
+    if (metal !== undefined) pub.metal = metal;
+    if (cantidad !== undefined) pub.cantidad = Number(cantidad);
+    if (unidad !== undefined) pub.unidad = unidad;
+    if (precio !== undefined) pub.precio = Number(precio);
+    if (precioAConvenir !== undefined) pub.precioAConvenir = !!precioAConvenir;
+    if (descripcion !== undefined) pub.descripcion = descripcion;
+    if (entrega !== undefined) pub.entrega = entrega;
+    if (ubicacion !== undefined) pub.ubicacion = ubicacion;
+    if (urgente !== undefined) pub.urgente = !!urgente;
+    await pub.save();
+    return res.json({ success: true, message: 'Publicación actualizada', data: pub.toJSON() });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const result = await Publicacion.deleteOne({ _id: req.params.id, usuarioId: req.userId });
+    if (result.deletedCount === 0) return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
+    return res.json({ success: true, message: 'Publicación eliminada' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = router;
