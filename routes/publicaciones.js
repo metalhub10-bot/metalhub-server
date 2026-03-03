@@ -29,11 +29,17 @@ router.get('/', async (req, res) => {
     if (metal) filter.metal = new RegExp(metal, 'i');
     if (ubicacion) filter.ubicacion = new RegExp(ubicacion, 'i');
     if (busqueda) {
+      const re = new RegExp(busqueda, 'i');
       filter.$or = [
-        { metal: new RegExp(busqueda, 'i') },
-        { descripcion: new RegExp(busqueda, 'i') },
+        { metal: re },
+        { descripcion: re },
+        { ubicacion: re },
       ];
     }
+
+    // Solo mostrar publicaciones de la última semana
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    filter.createdAt = { $gte: oneWeekAgo };
     const sort = {};
     if (orden === 'precio_asc') sort.precio = 1;
     else if (orden === 'precio_desc') sort.precio = -1;
@@ -55,7 +61,17 @@ router.get('/', async (req, res) => {
       delete pub.__v;
       delete pub.createdAt;
       delete pub.updatedAt;
-      pub.usuario = u ? { id: u._id.toString(), nombre: u.nombre, rating: u.rating ?? 0, ubicacion: u.ubicacion, verificado: u.verificado ?? false } : null;
+      pub.usuario = u
+        ? {
+            id: u._id.toString(),
+            nombre: u.nombre,
+            rating: u.rating ?? 0,
+            ubicacion: u.ubicacion,
+            verificado: u.verificado ?? false,
+            whatsapp: u.whatsapp,
+            avatarUrl: u.avatarUrl,
+          }
+        : null;
       return pub;
     });
     return res.json({ success: true, data, total });
@@ -80,7 +96,16 @@ router.get('/mias', requireAuth, async (req, res) => {
       delete pub.__v;
       delete pub.createdAt;
       delete pub.updatedAt;
-      pub.usuario = user ? { id: user._id.toString(), nombre: user.nombre, rating: user.rating ?? 0, ubicacion: user.ubicacion, verificado: user.verificado ?? false } : null;
+      pub.usuario = user
+        ? {
+            id: user._id.toString(),
+            nombre: user.nombre,
+            rating: user.rating ?? 0,
+            ubicacion: user.ubicacion,
+            verificado: user.verificado ?? false,
+            whatsapp: user.whatsapp,
+          }
+        : null;
       return pub;
     });
     return res.json({ success: true, data, total });
@@ -99,8 +124,28 @@ router.get('/:id', async (req, res) => {
     delete data.__v;
     delete data.createdAt;
     delete data.updatedAt;
-    data.usuario = user ? { id: user._id.toString(), nombre: user.nombre, rating: user.rating ?? 0, ubicacion: user.ubicacion, verificado: user.verificado ?? false, whatsapp: user.whatsapp } : null;
-    return res.json({ success: true, data });
+    data.usuario = user
+      ? {
+          id: user._id.toString(),
+          nombre: user.nombre,
+          rating: user.rating ?? 0,
+          ubicacion: user.ubicacion,
+          verificado: user.verificado ?? false,
+          whatsapp: user.whatsapp,
+          avatarUrl: user.avatarUrl,
+        }
+      : null;
+
+    let esPropia = false;
+    const sessionId = req.headers['x-session-id'];
+    if (sessionId) {
+      const session = await Session.findOne({ sessionId }).lean();
+      if (session && String(session.userId) === String(pub.usuarioId)) {
+        esPropia = true;
+      }
+    }
+
+    return res.json({ success: true, data, esPropia });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -135,7 +180,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   try {
     const pub = await Publicacion.findOne({ _id: req.params.id, usuarioId: req.userId });
     if (!pub) return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
-    const { tipo, metal, cantidad, unidad, precio, precioAConvenir, descripcion, entrega, ubicacion, urgente } = req.body || {};
+    const { tipo, metal, cantidad, unidad, precio, precioAConvenir, descripcion, entrega, ubicacion, urgente, cerrada } = req.body || {};
     if (tipo !== undefined) pub.tipo = tipo;
     if (metal !== undefined) pub.metal = metal;
     if (cantidad !== undefined) pub.cantidad = Number(cantidad);
@@ -146,6 +191,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (entrega !== undefined) pub.entrega = entrega;
     if (ubicacion !== undefined) pub.ubicacion = ubicacion;
     if (urgente !== undefined) pub.urgente = !!urgente;
+    if (cerrada !== undefined) pub.cerrada = !!cerrada;
     await pub.save();
     return res.json({ success: true, message: 'Publicación actualizada', data: pub.toJSON() });
   } catch (err) {

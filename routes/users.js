@@ -31,6 +31,7 @@ router.get('/me', requireAuth, async (req, res) => {
       rol: user.rol,
       bio: user.bio,
       ubicacion: user.ubicacion,
+      whatsapp: user.whatsapp,
       rating: user.rating ?? 0,
       operaciones: user.operaciones ?? 0,
       anunciosActivos: count,
@@ -44,12 +45,13 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.put('/me', requireAuth, async (req, res) => {
   try {
-    const { nombre, bio, ubicacion, avatarUrl } = req.body || {};
+    const { nombre, bio, ubicacion, avatarUrl, whatsapp } = req.body || {};
     const update = {};
     if (nombre !== undefined) update.nombre = nombre;
     if (bio !== undefined) update.bio = bio;
     if (ubicacion !== undefined) update.ubicacion = ubicacion;
     if (avatarUrl !== undefined) update.avatarUrl = avatarUrl;
+    if (whatsapp !== undefined) update.whatsapp = whatsapp;
     const user = await User.findByIdAndUpdate(req.userId, update, { new: true });
     if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     return res.json({ success: true, message: 'Perfil actualizado', user: user.toJSON() });

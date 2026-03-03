@@ -7,7 +7,8 @@ connect();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Aceptar payloads JSON más grandes (por ejemplo avatar en base64)
+app.use(express.json({ limit: '8mb' }));
 
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/users', require('./routes/users'));

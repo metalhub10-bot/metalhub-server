@@ -15,7 +15,7 @@ function resJson(res, success, data = null, message = null) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, nombre } = req.body || {};
+    const { email, password, nombre, avatarUrl, whatsapp } = req.body || {};
     if (!email || !password || !nombre) {
       return resJson(res, false, null, 'Faltan email, password o nombre');
     }
@@ -24,7 +24,13 @@ router.post('/register', async (req, res) => {
     }
     const exists = await User.findOne({ email });
     if (exists) return resJson(res, false, null, 'El email ya está registrado');
-    const user = await User.create({ email, password, nombre });
+    const user = await User.create({
+      email,
+      password,
+      nombre,
+      ...(avatarUrl ? { avatarUrl } : {}),
+      ...(whatsapp ? { whatsapp } : {}),
+    });
     const userObj = user.toJSON();
     return res.json({ success: true, message: 'Usuario creado', user: userObj });
   } catch (err) {

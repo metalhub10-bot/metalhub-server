@@ -12,6 +12,7 @@ const publicacionSchema = new mongoose.Schema({
   ubicacion: String,
   usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   urgente: { type: Boolean, default: false },
+  cerrada: { type: Boolean, default: false },
 }, { timestamps: true });
 
 publicacionSchema.set('toJSON', {
