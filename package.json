@@ -4,7 +4,8 @@
   "description": "Backend MetalHub - Express + MongoDB",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed": "node scripts/seed-user.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

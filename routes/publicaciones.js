@@ -104,6 +104,7 @@ router.get('/mias', requireAuth, async (req, res) => {
             ubicacion: user.ubicacion,
             verificado: user.verificado ?? false,
             whatsapp: user.whatsapp,
+            avatarUrl: user.avatarUrl,
           }
         : null;
       return pub;
