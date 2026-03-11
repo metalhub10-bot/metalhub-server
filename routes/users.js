@@ -60,4 +60,38 @@ router.put('/me', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Registrar o actualizar el token de notificaciones push Expo del usuario autenticado.
+ * Body: { token: string }
+ */
+router.post('/push-token', requireAuth, async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ success: false, message: 'Token inválido' });
+    }
+
+    // Validación básica de formato de token Expo
+    if (!token.startsWith('ExponentPushToken[')) {
+      return res.status(400).json({ success: false, message: 'Token Expo inválido' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      {
+        $addToSet: { expoPushTokens: token },
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    return res.json({ success: true, message: 'Token push registrado' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

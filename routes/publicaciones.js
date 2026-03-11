@@ -18,6 +18,99 @@ async function requireAuth(req, res, next) {
   next();
 }
 
+const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
+
+function isValidExpoToken(token) {
+  return typeof token === 'string' && token.startsWith('ExponentPushToken[');
+}
+
+async function sendExpoPushMessages(messages) {
+  if (!messages || (Array.isArray(messages) && messages.length === 0)) return;
+
+  const payload = Array.isArray(messages) ? messages : [messages];
+
+  try {
+    const res = await fetch(EXPO_PUSH_URL, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      // eslint-disable-next-line no-console
+      console.error('Error enviando push a Expo:', res.status, text);
+    } else {
+      const json = await res.json().catch(() => null);
+      if (json && json.data) {
+        // eslint-disable-next-line no-console
+        console.log('Respuesta Expo push:', json.data);
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error de red al enviar push a Expo:', err);
+  }
+}
+
+async function notifyNewPublication(pub) {
+  try {
+    // Buscar todos los usuarios con tokens registrados, excepto el creador de la publicación
+    const users = await User.find({
+      _id: { $ne: pub.usuarioId },
+      expoPushTokens: { $exists: true, $not: { $size: 0 } },
+    })
+      .select('expoPushTokens')
+      .lean();
+
+    const tokens = [
+      ...new Set(
+        users
+          .flatMap((u) => u.expoPushTokens || [])
+          .filter((t) => isValidExpoToken(t))
+      ),
+    ];
+
+    if (!tokens.length) return;
+
+    const esCompra = pub.tipo === 'compro';
+    const title = esCompra ? 'Nueva compra en MetalHub' : 'Nueva venta en MetalHub';
+
+    let body = `${pub.metal} · ${pub.cantidad} ${pub.unidad}`;
+    if (pub.precioAConvenir) {
+      body += ' · Precio a convenir';
+    } else if (pub.precio != null) {
+      body += ` · $${Number(pub.precio).toLocaleString('es-AR')} por ${pub.unidad}`;
+    }
+    if (pub.urgente) {
+      body = `⚡ Express · ${body}`;
+    }
+
+    const messages = tokens.map((token) => ({
+      to: token,
+      // Sonido personalizado definido en la app: assets/sounds/soundnotification.mp3
+      sound: 'soundnotification.mp3',
+      title,
+      body,
+      data: {
+        tipo: pub.tipo,
+        metal: pub.metal,
+        publicacionId: pub._id.toString(),
+        urgente: !!pub.urgente,
+      },
+    }));
+
+    await sendExpoPushMessages(messages);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Error al notificar nueva publicación:', err);
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const { tipo, orden, busqueda, metal, ubicacion, pagina = 1, limite = 20 } = req.query;
@@ -171,6 +264,10 @@ router.post('/', requireAuth, async (req, res) => {
       urgente: !!urgente,
       usuarioId: req.userId,
     });
+
+    // Enviar notificación push global (no bloquea la respuesta al cliente)
+    notifyNewPublication(doc).catch(() => {});
+
     return res.status(201).json({ success: true, message: 'Publicación creada', data: doc.toJSON() });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

@@ -15,6 +15,14 @@ const userSchema = new mongoose.Schema({
   suscripcionActiva: { type: Boolean, default: false },
   plan: String,
   vencimientoSuscripcion: Date,
+  /**
+   * Tokens de notificaciones push Expo asociados al usuario.
+   * Se usa un array para soportar múltiples dispositivos por cuenta.
+   */
+  expoPushTokens: {
+    type: [String],
+    default: [],
+  },
 }, { timestamps: true });
 
 userSchema.set('toJSON', {
