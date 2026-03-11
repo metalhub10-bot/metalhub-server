@@ -92,7 +92,7 @@ async function notifyNewPublication(pub) {
 
     const messages = tokens.map((token) => ({
       to: token,
-      // Sonido personalizado definido en la app: assets/sounds/soundnotification.mp3
+      channelId: 'metalhub',
       sound: 'soundnotification.mp3',
       title,
       body,

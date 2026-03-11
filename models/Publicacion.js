@@ -4,7 +4,7 @@ const publicacionSchema = new mongoose.Schema({
   tipo: { type: String, required: true, enum: ['vendo', 'compro'] },
   metal: { type: String, required: true },
   cantidad: { type: Number, required: true },
-  unidad: { type: String, required: true, enum: ['kg', 'tn'] },
+  unidad: { type: String, required: true, enum: ['kg', 'tn', 'un'] },
   precio: Number,
   precioAConvenir: { type: Boolean, default: false },
   descripcion: String,
