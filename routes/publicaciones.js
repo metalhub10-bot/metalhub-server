@@ -130,9 +130,17 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    // Solo mostrar publicaciones de la última semana
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    filter.createdAt = { $gte: oneWeekAgo };
+    // Express expira en 24hs, Mercado expira en 7 semanas
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const sevenWeeksAgo = new Date(Date.now() - 7 * 7 * 24 * 60 * 60 * 1000);
+    filter.$and = [
+      {
+        $or: [
+          { urgente: true, createdAt: { $gte: oneDayAgo } },
+          { urgente: { $ne: true }, createdAt: { $gte: sevenWeeksAgo } },
+        ],
+      },
+    ];
     const sort = {};
     if (orden === 'precio_asc') sort.precio = 1;
     else if (orden === 'precio_desc') sort.precio = -1;
