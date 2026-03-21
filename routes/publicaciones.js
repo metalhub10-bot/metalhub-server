@@ -135,7 +135,7 @@ router.get('/', async (req, res) => {
 
     // Express expira en 24hs, Mercado expira en 7 días
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
     filter.$and = [
       {
         $or: [
