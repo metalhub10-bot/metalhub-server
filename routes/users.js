@@ -60,6 +60,18 @@ router.put('/me', requireAuth, async (req, res) => {
   }
 });
 
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    const Session = require('../models/Session');
+    await Publicacion.deleteMany({ usuarioId: req.userId });
+    await Session.deleteMany({ userId: req.userId });
+    await User.findByIdAndDelete(req.userId);
+    return res.json({ success: true, message: 'Cuenta eliminada' });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 /**
  * Registrar o actualizar el token de notificaciones push Expo del usuario autenticado.
  * Body: { token: string }
