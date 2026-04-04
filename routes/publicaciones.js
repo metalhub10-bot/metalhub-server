@@ -27,42 +27,41 @@ function isValidExpoToken(token) {
 async function sendExpoPushMessages(messages) {
   if (!messages || (Array.isArray(messages) && messages.length === 0)) return;
 
-  const payload = Array.isArray(messages) ? messages : [messages];
+  const all = Array.isArray(messages) ? messages : [messages];
 
-  try {
-    const res = await fetch(EXPO_PUSH_URL, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+  // Expo limita a 100 mensajes por request
+  const chunks = [];
+  for (let i = 0; i < all.length; i += 100) {
+    chunks.push(all.slice(i, i + 100));
+  }
 
-    if (!res.ok) {
-      const text = await res.text();
-      // eslint-disable-next-line no-console
-      console.error('Error enviando push a Expo:', res.status, text);
-      // eslint-disable-next-line no-console
-      console.error('Payload enviado:', JSON.stringify(payload.map(m => ({
-        toLen: m.to?.length,
-        titleLen: m.title?.length,
-        bodyLen: m.body?.length,
-        soundLen: m.sound?.length,
-        channelIdLen: m.channelId?.length,
-        body: m.body,
-      }))));
-    } else {
-      const json = await res.json().catch(() => null);
-      if (json && json.data) {
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(chunk),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
         // eslint-disable-next-line no-console
-        console.log('Respuesta Expo push:', json.data);
+        console.error('Error enviando push a Expo:', res.status, text);
+      } else {
+        const json = await res.json().catch(() => null);
+        if (json && json.data) {
+          // eslint-disable-next-line no-console
+          console.log('Respuesta Expo push:', json.data);
+        }
       }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Error de red al enviar push a Expo:', err);
     }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Error de red al enviar push a Expo:', err);
   }
 }
 
