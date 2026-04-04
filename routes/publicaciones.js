@@ -44,6 +44,15 @@ async function sendExpoPushMessages(messages) {
       const text = await res.text();
       // eslint-disable-next-line no-console
       console.error('Error enviando push a Expo:', res.status, text);
+      // eslint-disable-next-line no-console
+      console.error('Payload enviado:', JSON.stringify(payload.map(m => ({
+        toLen: m.to?.length,
+        titleLen: m.title?.length,
+        bodyLen: m.body?.length,
+        soundLen: m.sound?.length,
+        channelIdLen: m.channelId?.length,
+        body: m.body,
+      }))));
     } else {
       const json = await res.json().catch(() => null);
       if (json && json.data) {
