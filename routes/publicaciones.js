@@ -89,6 +89,9 @@ async function notifyNewPublication(pub) {
     if (pub.urgente) {
       body = `⚡ Express · ${body}`;
     }
+    if (body.length > 100) {
+      body = body.substring(0, 97) + '...';
+    }
 
     const messages = tokens.map((token) => ({
       to: token,
