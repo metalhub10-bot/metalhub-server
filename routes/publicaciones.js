@@ -142,23 +142,19 @@ router.get('/', async (req, res) => {
     }
 
     // Express si urgente=true, Mercado por defecto (excluye urgentes)
-    if (urgente === 'true') filter.urgente = true;
-    else filter.urgente = { $ne: true };
-
     // Nunca mostrar publicaciones cerradas
     filter.cerrada = { $ne: true };
 
     // Express expira en 24hs, Mercado expira en 7 días
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    filter.$and = [
-      {
-        $or: [
-          { urgente: true, createdAt: { $gte: oneDayAgo } },
-          { urgente: { $ne: true }, createdAt: { $gte: sevenDaysAgo } },
-        ],
-      },
-    ];
+    if (urgente === 'true') {
+      filter.urgente = true;
+      filter.createdAt = { $gte: oneDayAgo };
+    } else {
+      filter.urgente = { $ne: true };
+      filter.createdAt = { $gte: sevenDaysAgo };
+    }
     const sort = {};
     if (orden === 'precio_asc') sort.precio = 1;
     else if (orden === 'precio_desc') sort.precio = -1;

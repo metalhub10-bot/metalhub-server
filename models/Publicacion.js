@@ -15,6 +15,10 @@ const publicacionSchema = new mongoose.Schema({
   cerrada: { type: Boolean, default: false },
 }, { timestamps: true });
 
+// Índices para acelerar las queries principales
+publicacionSchema.index({ urgente: 1, cerrada: 1, createdAt: -1 });
+publicacionSchema.index({ createdAt: -1 });
+
 publicacionSchema.set('toJSON', {
   transform: (_, obj) => {
     obj.id = obj._id.toString();
