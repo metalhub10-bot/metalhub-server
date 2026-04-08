@@ -25,6 +25,7 @@ app.use('/api/v1/metales', require('./routes/metales'));
 app.use('/api/v1/suscripcion', require('./routes/suscripcion'));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/version', (req, res) => res.json({ version: 'v2-connection-cache', timeout: 8000 }));
 
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
