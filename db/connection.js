@@ -1,20 +1,35 @@
 const mongoose = require('mongoose');
 
-// Cachear la conexión entre invocaciones serverless (Vercel)
 let cached = global.mongoose || { conn: null, promise: null };
 global.mongoose = cached;
 
 const connect = async () => {
-  if (cached.conn) return cached.conn;
+  // Reutilizar si ya hay conexión activa
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
+  // Si la conexión se cayó, resetear para reconectar
+  if (mongoose.connection.readyState !== 1 && mongoose.connection.readyState !== 2) {
+    cached.conn = null;
+    cached.promise = null;
+  }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGO_URI, {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
-    });
+    cached.promise = mongoose
+      .connect(process.env.MONGO_URI, {
+        bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 8000,
+        connectTimeoutMS: 8000,
+        socketTimeoutMS: 15000,
+      })
+      .catch((err) => {
+        // Resetear para que el próximo request pueda reintentar
+        cached.promise = null;
+        cached.conn = null;
+        throw err;
+      });
   }
 
   cached.conn = await cached.promise;
