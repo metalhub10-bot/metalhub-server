@@ -3,12 +3,20 @@ const express = require('express');
 const cors = require('cors');
 const { connect } = require('./db/connection');
 
-connect();
-
 const app = express();
 app.use(cors());
 // Aceptar payloads JSON más grandes (por ejemplo avatar en base64)
 app.use(express.json({ limit: '8mb' }));
+
+// Garantizar conexión a MongoDB antes de cada request (patrón serverless)
+app.use(async (req, res, next) => {
+  try {
+    await connect();
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Error de conexión a la base de datos' });
+  }
+});
 
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/users', require('./routes/users'));
