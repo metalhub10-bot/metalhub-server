@@ -124,7 +124,7 @@ async function notifyNewPublication(pub) {
 
 router.get('/', async (req, res) => {
   try {
-    const { tipo, orden, busqueda, metal, ubicacion, pagina = 1, limite = 20 } = req.query;
+    const { tipo, orden, busqueda, metal, ubicacion, urgente, pagina = 1, limite = 20 } = req.query;
     const filter = {};
     if (tipo && tipo !== 'todos') {
       if (tipo === 'compran') filter.tipo = 'compro';
@@ -141,12 +141,16 @@ router.get('/', async (req, res) => {
       ];
     }
 
+    // Filtrar por urgente si se especifica
+    if (urgente === 'true') filter.urgente = true;
+    else if (urgente === 'false') filter.urgente = { $ne: true };
+
     // Nunca mostrar publicaciones cerradas
     filter.cerrada = { $ne: true };
 
     // Express expira en 24hs, Mercado expira en 7 días
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     filter.$and = [
       {
         $or: [
