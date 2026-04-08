@@ -18,11 +18,9 @@ const connect = async () => {
   if (!cached.promise) {
     cached.promise = mongoose
       .connect(process.env.MONGO_URI, {
-        bufferCommands: false,
-        maxPoolSize: 10,
-        serverSelectionTimeoutMS: 8000,
-        connectTimeoutMS: 8000,
-        socketTimeoutMS: 15000,
+        maxPoolSize: 1,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
       })
       .catch((err) => {
         // Resetear para que el próximo request pueda reintentar

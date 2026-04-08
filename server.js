@@ -3,12 +3,15 @@ const express = require('express');
 const cors = require('cors');
 const { connect } = require('./db/connection');
 
+// Iniciar conexión al cargar el módulo para reducir latencia en el primer request
+connect().catch(() => {});
+
 const app = express();
 app.use(cors());
 // Aceptar payloads JSON más grandes (por ejemplo avatar en base64)
 app.use(express.json({ limit: '8mb' }));
 
-// Garantizar conexión a MongoDB antes de cada request (patrón serverless)
+// Garantizar conexión activa antes de cada request
 app.use(async (req, res, next) => {
   try {
     await connect();
