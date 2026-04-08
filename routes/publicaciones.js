@@ -141,9 +141,9 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    // Filtrar por urgente si se especifica
+    // Express si urgente=true, Mercado por defecto (excluye urgentes)
     if (urgente === 'true') filter.urgente = true;
-    else if (urgente === 'false') filter.urgente = { $ne: true };
+    else filter.urgente = { $ne: true };
 
     // Nunca mostrar publicaciones cerradas
     filter.cerrada = { $ne: true };
