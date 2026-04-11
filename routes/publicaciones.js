@@ -167,7 +167,7 @@ router.get('/', async (req, res) => {
       Publicacion.countDocuments(filter),
     ]);
     const userIds = [...new Set(items.map((i) => i.usuarioId.toString()))];
-    const users = await User.find({ _id: { $in: userIds } }).lean();
+    const users = await User.find({ _id: { $in: userIds } }).select('_id nombre rating ubicacion verificado whatsapp').lean();
     const userMap = Object.fromEntries(users.map((u) => [u._id.toString(), u]));
     const data = items.map((p) => {
       const u = userMap[p.usuarioId.toString()];
@@ -184,7 +184,6 @@ router.get('/', async (req, res) => {
             ubicacion: u.ubicacion,
             verificado: u.verificado ?? false,
             whatsapp: u.whatsapp,
-            avatarUrl: u.avatarUrl,
           }
         : null;
       return pub;
