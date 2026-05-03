@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   nombre: { type: String, required: true },
   avatarUrl: String,
-  rol: String,
+  rol: { type: String, enum: ['user', 'admin'], default: 'user' },
   bio: String,
   ubicacion: String,
   rating: { type: Number, default: 0 },
@@ -15,6 +16,8 @@ const userSchema = new mongoose.Schema({
   suscripcionActiva: { type: Boolean, default: false },
   plan: String,
   vencimientoSuscripcion: Date,
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   /**
    * Tokens de notificaciones push Expo asociados al usuario.
    * Se usa un array para soportar múltiples dispositivos por cuenta.
@@ -33,6 +36,12 @@ userSchema.set('toJSON', {
     delete obj.password;
     return obj;
   }
+});
+
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
 module.exports = mongoose.model('User', userSchema);
