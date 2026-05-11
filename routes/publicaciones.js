@@ -272,6 +272,33 @@ router.post('/', requireAuth, async (req, res) => {
     if (!tipo || !metal || cantidad == null || !unidad) {
       return res.status(400).json({ success: false, message: 'Faltan tipo, metal, cantidad o unidad' });
     }
+    const now = Date.now();
+
+    const activePublications = await Publicacion.countDocuments({
+      usuarioId: req.userId,
+      cerrada: { $ne: true },
+      $or: [
+        {
+          urgente: true,
+          createdAt: {
+            $gte: new Date(now - 24 * 60 * 60 * 1000)
+          }
+        },
+        {
+          urgente: { $ne: true },
+          createdAt: {
+            $gte: new Date(now - 7 * 24 * 60 * 60 * 1000)
+          }
+        }
+      ]
+    });
+
+    if (activePublications >= 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Has alcanzado el límite de 5 publicaciones activas'
+      });
+    }
     const doc = await Publicacion.create({
       tipo,
       metal,
