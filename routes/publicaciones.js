@@ -272,7 +272,7 @@ router.post('/', requireAuth, async (req, res) => {
     if (!tipo || !metal || cantidad == null || !unidad) {
       return res.status(400).json({ success: false, message: 'Faltan tipo, metal, cantidad o unidad' });
     }
-    const now = Date.now();
+    {/*const now = Date.now();
 
     const activePublications = await Publicacion.countDocuments({
       usuarioId: req.userId,
@@ -298,7 +298,7 @@ router.post('/', requireAuth, async (req, res) => {
         success: false,
         message: 'Has alcanzado el límite de 5 publicaciones activas'
       });
-    }
+    }*/}
     const doc = await Publicacion.create({
       tipo,
       metal,
