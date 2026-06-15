@@ -13,6 +13,8 @@ const publicacionSchema = new mongoose.Schema({
   usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   urgente: { type: Boolean, default: false },
   cerrada: { type: Boolean, default: false },
+  vistas: { type: Number, default: 0 },
+  contactos: { type: Number, default: 0 },
 }, { timestamps: true });
 
 // Índices para acelerar las queries principales

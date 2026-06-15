@@ -6,13 +6,24 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   nombre: { type: String, required: true },
   avatarUrl: String,
-  rol: { type: String, enum: ['user', 'admin'], default: 'user' },
+  rol: { type: String, enum: ['user','moderator', 'admin', 'superadmin'], default: 'user' },
   bio: String,
   ubicacion: String,
   rating: { type: Number, default: 0 },
   operaciones: { type: Number, default: 0 },
   verificado: { type: Boolean, default: false },
   whatsapp: String,
+  subscription: {
+    postPlan: {
+      type: String,
+      enum: ['free', 'basic', 'premium'],
+      default: 'free'
+    },
+    industryPlan: {
+      type: String,
+      enum: ['none', 'industry']
+    }
+  },
   suscripcionActiva: { type: Boolean, default: false },
   plan: String,
   vencimientoSuscripcion: Date,

@@ -1,5 +1,6 @@
 const express = require('express');
 const Publicacion = require('../models/Publicacion');
+const publicacionesController = require('../controllers/publicacionesController');
 const User = require('../models/User');
 const Session = require('../models/Session');
 
@@ -354,5 +355,9 @@ router.delete('/:id', requireAuth, async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 });
+
+router.post('/:id/vista', requireAuth, publicacionesController.addVista);
+
+router.post('/:id/contacto', requireAuth, publicacionesController.addContacto);
 
 module.exports = router;
